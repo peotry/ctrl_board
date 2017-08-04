@@ -152,6 +152,43 @@ wvErrCode I2C_Open(const char *dev_name)
 
 
 /*
+* function: I2C_Close
+*
+* description: 关闭i2c设备
+*
+* input:  @dev_name:
+*
+* output: @
+*
+* return@ 
+* success: 
+*    fail: 
+*
+* author: linsheng.pan
+*/
+wvErrCode I2C_Close(const char *dev_name)
+{
+    if(!dev_name)
+    {
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: param = NULL");
+        return WV_ERR_PARAMS;
+    }
+
+    //if dev existed
+    char err_str[ERR_BUF_LEN] = {0};
+    int index = I2C_FindInfoIndex(dev_name);
+    if(index < 0)
+    {
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: can't open i2c dev: %s", dev_name);
+        return WV_ERR_FAILURE;
+    }
+
+    CLOSE(s_stI2cInfo[index].fd);
+
+    return WV_SUCCESS;
+}
+
+/*
 * function: I2C_WriteReg
 *
 * description: 向i2c总线上地址为 chip_addr 的芯片里面的寄存器写入一个值
