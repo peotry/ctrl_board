@@ -1,65 +1,43 @@
-/******************************************************************************
-
-  Copyright (C), 2013, HuiZhou WELLAV Technology Co., Ltd.
-
- ******************************************************************************
-  File Name     : xilinx_i2c.h
-  Version       : Initial Draft
-  Author        : guanghui.chen
-  Created       : 2013/12/12
-  Last Modified :
-  Description   : xlinx_i2c.c header file
-  Function List :
-  History       :
-  1.Date        : 2013/12/12
-    Author      : guanghui.chen
-    Modification: Created file
-
-******************************************************************************/
-
+/**********************************************************************
+* Copyright (c) 2017, WELLAV Technology Co.,Ltd.
+* All rights reserved.
+*
+* FileName  I2C.h
+* Description : The Incude of I2C Interface
+* Author    : jie.zhan
+* Modified  :
+* Reviewer  :
+* Date      : 2017-04-19
+* Record    :
+*
+**********************************************************************/
 #ifndef INCLUDE_DRIVERS_I2C_H
 #define INCLUDE_DRIVERS_I2C_H
 
-#ifdef __cplusplus
-#if __cplusplus
-extern "C"{
-#endif
-#endif /* __cplusplus */
+#include "appGlobal.h"
+#include "err/wv_err.h"
 
-#define I2C_SUCCESS           (0)
-#define I2C_FAILURE           (-1)
-/* smbus_access read or write markers */
-#define I2C_SMBUS_READ  1
-#define I2C_SMBUS_WRITE 0
+#define I2C_BUS_COUNT	3
+#define I2C_BUS_0_NAME  "/dev/i2c-0"  // PORT0 & PORT1	
+#define I2C_BUS_1_NAME  "/dev/i2c-1"  // PORT2 & PORT3
+#define I2C_BUS_2_NAME  "/dev/i2c-2"  // PORT4 & PORT5	
+#define I2C_BUS_3_NAME  "/dev/i2c-3"  // reserved
 
-/* SMBus transaction types (size parameter in the above functions) 
-   Note: these no longer correspond to the (arbitrary) PIIX4 internal codes! */
-#define I2C_SMBUS_QUICK         0
-#define I2C_SMBUS_BYTE          1
-#define I2C_SMBUS_BYTE_DATA     2 
-#define I2C_SMBUS_WORD_DATA     3
-#define I2C_SMBUS_PROC_CALL     4
-#define I2C_SMBUS_BLOCK_DATA        5
-#define I2C_SMBUS_I2C_BLOCK_BROKEN  6
-#define I2C_SMBUS_BLOCK_PROC_CALL   7       /* SMBus 2.0 */
-#define I2C_SMBUS_I2C_BLOCK_DATA    8
+#define I2C_DEV_MAX     (2)
+#define I2C_DEV_NAME_0  "/dev/i2c-0"
+#define I2C_DEV_NAME_1  "/dev/i2c-1"
 
-#define I2C0_DEV_NAME "/dev/i2c-0"
-#define I2C1_DEV_NAME "/dev/i2c-1"
+struct I2cInfo
+{
+    char *dev_name;  //i2c 设备名字
+    int  fd;         //ioctl 操作的描述符
+};
 
-extern int i2c_set_slave_addr(int file, int address, int force);
-extern int i2c_receive_msg(int file, unsigned char address, unsigned char *value, unsigned char len);
-extern int i2c_write_msg(int file, unsigned char address, unsigned char *value, unsigned char len);
-extern int i2c_dev_close(int file);
-extern int i2c_dev_open(const char *dev_name,unsigned char device_addr);
-extern int i2c_read(int file,unsigned char offset,unsigned char *value);
-extern int i2c_write(int file,unsigned char offset,unsigned char value);
+wvErrCode I2C_InitAll(void);
+wvErrCode I2C_Open(const char *dev_name);
+wvErrCode I2C_WriteReg(const char *dev_name, const unsigned short chip_addr, const unsigned char reg_addr, const unsigned char value);
+wvErrCode I2C_ReadReg(const char *dev_name, const unsigned short chip_addr, const unsigned char reg_addr, unsigned char *value);
+wvErrCode I2C_WriteRegWithCheck(const char *dev_name, const unsigned short chip_addr, const unsigned char reg_addr, const unsigned char value);
 
-#ifdef __cplusplus
-#if __cplusplus
-}
-#endif
-#endif /* __cplusplus */
+#endif /* _WV_I2C_H_ */
 
-
-#endif /* __XLINX_I2C_H__ */

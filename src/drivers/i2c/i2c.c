@@ -1,359 +1,321 @@
-/******************************************************************************
+/**********************************************************************
 * Copyright (c) 2017, WELLAV Technology Co.,Ltd.
 * All rights reserved.
 *
-* FileName xilinx_i2c.c
-* Description :xlinx i2c controller driver
-* Author    : guanghui.chen
-* Modified  : ruibin.zhang
+* FileName  I2C.c
+* Description : The Driver of I2C Interface
+* Author    : jie.zhan
+* Modified  :
 * Reviewer  :
-* Date      : 2017-02-26
+* Date      : 2017-04-19
 * Record    :
 *
-******************************************************************************/
+**********************************************************************/
 
-#include "i2c/i2c.h"
+#include "i2c.h"
+
+#include "log/log.h"
 
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
-#include <sys/types.h>
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
-#include <semaphore.h>
 
-volatile int g_I2C0Fd = -1;
-volatile int g_I2C1Fd = -1;
-
-static sem_t  g_stI2CSem;
-
-/*****************************************************************************
-  Function:     i2c_LockInit
-  Description:  none
-  Input:        none
-  Output:       none
-  Return:       none
-  Author:       ruibin.zhang
-*****************************************************************************/
-static void i2c_LockInit(void)
-{
-    sem_init(&g_stI2CSem, 0, 1);
-}
-
-/*****************************************************************************
-  Function:     i2c_Lock
-  Description:  none
-  Input:        none
-  Output:       none
-  Return:       none
-  Author:       ruibin.zhang
-*****************************************************************************/
-static void i2c_Lock(void)
-{
-    sem_wait(&g_stI2CSem);
-}
-
-/*****************************************************************************
-  Function:     i2c_UnLock
-  Description:  none
-  Input:        none
-  Output:       none
-  Return:       none
-  Author:       ruibin.zhang
-*****************************************************************************/
-static void i2c_UnLock(void)
-{
-    sem_post(&g_stI2CSem);
-}
-
-/*****************************************************************************
-  Function:     i2c_set_slave_addr
-  Description:  set device's slave addrs
-  Input:        int file
-                int address
-                int force
-  Output:       none
-  Return:       SUCCESS 0;FAILURE -1
-  Author:       guanghui.chen
-*****************************************************************************/
-int i2c_set_slave_addr(int file, int address, int force)
-{
-    int ret = I2C_FAILURE;
-
-    /* With force, let the user read from/write to the registers
-       even when a driver is also running */
-    ret = ioctl(file, force ? I2C_SLAVE_FORCE : I2C_SLAVE, address);
-    if (I2C_SUCCESS > ret)
-    {
-        printf("Could not set address to 0x%02x,ret = %d.\n",address,ret);
-        return I2C_FAILURE;
-    }
-
-    return I2C_SUCCESS;
-}
-
-/*****************************************************************************
-  Function:     i2c_smbus_access
-  Description:  i2c access func
-  Input:        int file
-                char read_write
-                unsigned char command
-                int size
-                union i2c_smbus_data *data
-  Output:       none
-  Return:       SUCCESS 0;FAILURE -1
-  Author:       guanghui.chen
-*****************************************************************************/
-static int i2c_smbus_access(int file, char read_write, unsigned char command,
-                                     int size, union i2c_smbus_data *data)
-{
-    struct i2c_smbus_ioctl_data args;
-
-    args.read_write = read_write;
-    args.command = command;
-    args.size = size;
-    args.data = data;
-    return ioctl(file,I2C_SMBUS,&args);
-}
-
-/*****************************************************************************
-  Function:     i2c_smbus_access
-  Description:  i2c access func
-  Input:        int file
-                char read_write
-                unsigned char command
-                int size
-                union i2c_smbus_data *data
-  Output:       none
-  Return:       SUCCESS 0;FAILURE -1
-  Author:       huada.huang
-*****************************************************************************/
-static int i2c_rdwr_access(int file, unsigned char address, unsigned short read_write,
-                                    int size, unsigned char *data)
-{
-    int ret = I2C_FAILURE;
-    struct i2c_rdwr_ioctl_data args;
-
-    if (size > 0)
-    {
-        struct i2c_msg msgs =
-        {
-             .addr = address,
-             .flags = read_write, //read or write
-             .len = size,
-             .buf = data
+static struct I2cInfo s_stI2cInfo[I2C_DEV_MAX] = {
+            {I2C_DEV_NAME_0, -1},
+            {I2C_DEV_NAME_1, -1},
         };
 
-        args.nmsgs = 1;
-        args.msgs = &msgs;
 
-        ret = ioctl(file, I2C_RDWR,&args);
-    }
-    return ret;
-}
-
-/*****************************************************************************
-  Function:     i2c_smbus_write_byte_data
-  Description:  i2c write by one byte
-  Input:        int file
-                unsigned char command
-                unsigned char value
-  Output:       none
-  Return:       SUCCESS 0;FAILURE -1
-  Author:       guanghui.chen
-*****************************************************************************/
-static int i2c_smbus_write_byte_data(int file, unsigned char command, unsigned char value)
+/*
+* function: I2C_FindInfoIndex
+*
+* description: 找到i2c结构体的索引
+*
+* input:  @dev_name: 设备名字
+*
+* output: @
+*
+* return@ 
+* success: index 
+*    fail: -1
+*
+* author: linsheng.pan
+*/
+static int I2C_FindInfoIndex(const char *dev_name)
 {
-    union i2c_smbus_data data;
-
-    data.byte = value;
-    return i2c_smbus_access(file,I2C_SMBUS_WRITE,command,
-                            I2C_SMBUS_BYTE_DATA, &data);
-}
-
-/*****************************************************************************
-  Function:     i2c_smbus_read_byte_data
-  Description:  i2c smbus read by one byte
-  Input:        int file
-                unsigned char command
-                unsigned char *value
-  Output:       none
-  Return:       SUCCESS 0;FAILURE -1
-  Author:       guanghui.chen
-*****************************************************************************/
-static int i2c_smbus_read_byte_data(int file, unsigned char command, unsigned char *value)
-{
-    int ret = I2C_FAILURE;
-    union i2c_smbus_data data;
-
-    ret = i2c_smbus_access(file,I2C_SMBUS_READ,command,I2C_SMBUS_BYTE_DATA,&data);
-    if (I2C_SUCCESS == ret)
+    if(!dev_name)
     {
-        *value = data.byte;
-        return I2C_SUCCESS;
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: param = NULL");
+        return -1;
+    }
+
+    int i = 0;
+
+    for(i = 0; i < I2C_DEV_MAX; ++i)
+    {
+        if(!strcmp(s_stI2cInfo[i].dev_name, dev_name))
+        {
+            break;
+        }
+    }
+
+    if(I2C_DEV_MAX == i)
+    {
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: can't find i2c dev:%s", dev_name);
+        return -1;
+    }
+
+    return i;
+}
+
+
+
+/*
+* function: I2C_InitAll
+*
+* description: 初始化所有的I2C
+*
+* input:  @
+*
+* output: @
+*
+* return@ 
+* success: 
+*    fail: 
+*
+* author: linsheng.pan
+*/
+wvErrCode I2C_InitAll(void)
+{
+    int i = 0;
+    for(i = 0; i < I2C_DEV_MAX; ++i)
+    {
+        I2C_Open(s_stI2cInfo[i].dev_name);
+    }
+
+    return WV_SUCCESS;
+}
+
+
+/*
+* function: I2C_Open
+*
+* description: 打开i2c设备
+*
+* input:  @
+*
+* output: @
+*
+* return@ 
+* success: 
+*    fail: 
+*
+* author: linsheng.pan
+*/
+wvErrCode I2C_Open(const char *dev_name)
+{
+    if(!dev_name)
+    {
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: param = NULL");
+        return WV_ERR_PARAMS;
+    }
+
+    //if dev existed
+    char err_str[ERR_BUF_LEN] = {0};
+    int index = I2C_FindInfoIndex(dev_name);
+    if(index < 0)
+    {
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: can't open i2c dev: %s", dev_name);
+        return WV_ERR_FAILURE;
+    }
+
+    //open
+    s_stI2cInfo[index].fd = open(dev_name, O_RDWR); 
+    if(s_stI2cInfo[index].fd > 0)
+    {
+        LOG_PRINTF(LOG_LEVEL_DEBUG, LOG_MODULE_DRIVERS, "Open i2c dev:%s successful.", dev_name);
+        return WV_SUCCESS;
     }
     else
     {
-        return ret;
+        ERR_STRING(err_str);
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: open i2c dev:%s , %s", err_str);
+        return WV_ERR_FAILURE;
     }
 }
 
-/*****************************************************************************
-  Function:     i2c_receive_msg
-  Description:  i2c receive msg
-  Input:        int file
-                unsigned char address
-                unsigned char *value
-                unsigned char len
-  Output:       none
-  Return:       SUCCESS 0;FAILURE -1
-  Author:       huada.huang
-*****************************************************************************/
-int i2c_receive_msg(int file, unsigned char address, unsigned char *value, unsigned char len)
-{
-    int ret = I2C_FAILURE;
-    i2c_Lock();
 
-    ret = i2c_rdwr_access(file, address, I2C_M_RD, len, value);
-    if(I2C_SUCCESS > ret)
+/*
+* function: I2C_WriteReg
+*
+* description: 向i2c总线上地址为 chip_addr 的芯片里面的寄存器写入一个值
+*
+* input:  @dev_name:i2c设备名字
+*         @chip_addr:芯片地址
+*         @reg_addr:寄存器地址
+*         @value:值
+*
+* output: @
+*
+* return@ 
+* success: WV_SUCCESS
+*    fail: WV_ERR_FAILURE
+*
+* author: linsheng.pan
+*/
+wvErrCode I2C_WriteReg(const char *dev_name, const unsigned short chip_addr, const unsigned char reg_addr, const unsigned char value)
+{
+    if(!dev_name)
     {
-        printf("i2c_receive_msg:  error,ret = %x.\n",ret);
-        return I2C_FAILURE;
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: param = NULL");
+        return WV_ERR_PARAMS;
     }
-    i2c_UnLock();
-    return I2C_SUCCESS;
+
+	struct i2c_rdwr_ioctl_data  I2C_Data;
+    char err_buf[ERR_BUF_LEN] = {0};
+    int index = 0;
+    wvErrCode ret = WV_SUCCESS;	
+
+    if((index = I2C_FindInfoIndex(dev_name)) < 0)
+    {
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: can't find i2c dev:%s", dev_name);
+        return WV_ERR_FAILURE;
+    }
+
+	I2C_Data.nmsgs = 1;
+	I2C_Data.msgs  = (struct i2c_msg *)malloc(I2C_Data.nmsgs * sizeof(struct i2c_msg));
+	I2C_Data.msgs[0].len    = 2;
+	I2C_Data.msgs[0].addr   = (chip_addr >> 1);
+	I2C_Data.msgs[0].flags  = 0;
+	I2C_Data.msgs[0].buf    = (unsigned char*)malloc(I2C_Data.msgs[0].len);
+	I2C_Data.msgs[0].buf[0] = reg_addr;
+	I2C_Data.msgs[0].buf[1] = value;
+
+    if(ioctl(s_stI2cInfo[index].fd, I2C_RDWR, (unsigned long)&I2C_Data) < 0)
+    {
+        ERR_STRING(err_buf);
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: call ioctl:%s", err_buf);
+        ret = WV_ERR_FAILURE;
+    }
+   
+	free(I2C_Data.msgs[0].buf);
+	free(I2C_Data.msgs);
+
+	return ret;
 }
 
-/*****************************************************************************
-  Function:     i2c_write_msg
-  Description:  i2c write msg
-  Input:        int file
-                unsigned char address
-                unsigned char *value
-                unsigned char len
-  Output:       none
-  Return:       SUCCESS 0;FAILURE -1
-  Author:       huada.huang
-*****************************************************************************/
-int i2c_write_msg(int file, unsigned char address, unsigned char *value, unsigned char len)
+/*
+* function: I2C_ReadReg
+*
+* description: 向i2c总线上地址为 chip_addr 的芯片里面的寄存器读取一个值
+*
+* input:  @dev_name:i2c设备名字
+*         @chip_addr:芯片地址
+*         @reg_addr:寄存器地址
+*         @value:值
+*
+* output: @
+*
+* return@ 
+* success: WV_SUCCESS
+*    fail: WV_ERR_FAILURE
+*
+* author: linsheng.pan
+*/
+wvErrCode I2C_ReadReg(const char *dev_name, const unsigned short chip_addr, const unsigned char reg_addr, unsigned char *value)
 {
-    int ret = I2C_FAILURE;
-    i2c_Lock();
-
-    ret = i2c_rdwr_access(file, address, 0, len, value);
-    if(I2C_SUCCESS > ret)
+    if((!dev_name) || (!value))
     {
-        printf("i2c_write_msg:  error,ret = %x.\n",ret);
-        return I2C_FAILURE;
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: param = NULL");
+        return WV_ERR_PARAMS;
     }
-    i2c_UnLock();
-    return I2C_SUCCESS;
+
+	struct i2c_rdwr_ioctl_data  I2C_Data;
+    char err_buf[ERR_BUF_LEN] = {0};
+    int index = 0;
+    wvErrCode ret = WV_SUCCESS;	
+
+    if((index = I2C_FindInfoIndex(dev_name)) < 0)
+    {
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: can't find i2c dev:%s", dev_name);
+        return WV_ERR_FAILURE;
+    }
+
+
+    I2C_Data.nmsgs  = 2;
+    I2C_Data.msgs   = (struct i2c_msg *)malloc(I2C_Data.nmsgs * sizeof(struct i2c_msg));
+    I2C_Data.msgs[0].len    = 1;
+    I2C_Data.msgs[0].addr   = (chip_addr >> 1);
+    I2C_Data.msgs[0].flags  = 0;
+    I2C_Data.msgs[0].buf    = (unsigned char*)malloc(1);
+    I2C_Data.msgs[0].buf[0] = reg_addr;
+    
+	I2C_Data.msgs[1].len    = 1;
+	I2C_Data.msgs[1].addr   = (chip_addr >> 1);
+    I2C_Data.msgs[1].flags  = I2C_M_RD;
+    I2C_Data.msgs[1].buf    = (unsigned char*)malloc(1);
+    I2C_Data.msgs[1].buf[0] = 0;	
+
+    if(ioctl(s_stI2cInfo[index].fd, I2C_RDWR, (unsigned long)&I2C_Data) < 0)
+    {
+        ERR_STRING(err_buf);
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: call ioctl:%s", err_buf);
+        ret = WV_ERR_FAILURE;
+    }
+    else
+    {
+        *value = I2C_Data.msgs[1].buf[0];
+    }
+   
+    free(I2C_Data.msgs[0].buf);
+    free(I2C_Data.msgs[1].buf);
+    free(I2C_Data.msgs);
+
+	return ret;
 }
 
-/*****************************************************************************
-  Function:     i2c_dev_open
-  Description:  i2c dev open
-  Input:        const char *dev_name       device name,such as "/dev/i2c-0"
-                unsigned char device_addr  slave device address,such as 0x4B(ADT7410)
-  Output:       none
-  Return:       SUCCESS 0;FAILURE -1
-  Author:       guanghui.chen
-*****************************************************************************/
-int i2c_dev_open(const char *dev_name,unsigned char device_addr)
+/*
+* function: I2C_WriteRegWithCheck
+*
+* description: 向i2c总线上地址为 chip_addr 的芯片里面的寄存器写入一个值
+*
+* input:  @dev_name:i2c设备名字
+*         @chip_addr:芯片地址
+*         @reg_addr:寄存器地址
+*         @value:值
+*
+* output: @
+*
+* return@ 
+* success: WV_SUCCESS
+*    fail: WV_ERR_FAILURE
+*
+* author: linsheng.pan
+*/
+wvErrCode I2C_WriteRegWithCheck(const char *dev_name, const unsigned short chip_addr, const unsigned char reg_addr, const unsigned char value)
 {
-    int fd = -1;
-    int ret = I2C_FAILURE;
 
-    i2c_LockInit();
+    wvErrCode ret = WV_SUCCESS;
+    unsigned char read_val = 0;
 
-    fd = open(dev_name, O_RDWR);
-    if(0 > fd)
+    if(WV_SUCCESS == I2C_WriteReg(dev_name, chip_addr, reg_addr, value))
     {
-        printf("i2c_dev_open:open error.\n");
-        return I2C_FAILURE;
+        if(WV_SUCCESS == I2C_ReadReg(dev_name, chip_addr, reg_addr, &read_val))
+        {
+            if(value != read_val) 
+            {
+                printf("Error: WriteVal = %d, ReadVal = %d\n", value, read_val); 
+            }
+        }
+
     }
-    ret = i2c_set_slave_addr(fd,device_addr,0);
-    if(I2C_SUCCESS > ret)
-    {
-        close(fd);
-        printf("i2c_dev_open:set_slave_addr error.\n");
-        return I2C_FAILURE;
-    }
-
-    return fd;
-
-}
-
-/*****************************************************************************
-  Function:     i2c_dev_close
-  Description:  close i2c device
-  Input:        int file  the open device file descriptor
-  Output:       none
-  Return:       SUCCESS 0;FAILURE -1
-  Author:       guanghui.chen
-*****************************************************************************/
-int i2c_dev_close(int file)
-{
-    int ret = I2C_FAILURE;
-
-    ret = close(file);
 
     return ret;
-}
-
-/*****************************************************************************
-  Function:     i2c_write
-  Description:  i2c write by one byte
-  Input:        int file              the open device file descriptor
-                unsigned char offset  address of the register
-                unsigned char value   the value you want to set
-  Output:       none
-  Return:       SUCCESS 0;FAILURE -1
-  Author:       guanghui.chen
-*****************************************************************************/
-int i2c_write(int file,unsigned char offset,unsigned char value)
-{
-    int ret = I2C_FAILURE;
-    i2c_Lock();
-
-    ret = i2c_smbus_write_byte_data(file, offset, value);
-    if(I2C_SUCCESS > ret)
-    {
-        printf("i2c_write:write offset %d error,ret = %x.\n",offset,ret);
-        return I2C_FAILURE;
-    }
-
-    i2c_UnLock();
-    return I2C_SUCCESS;
-}
-
-/*****************************************************************************
-  Function:     i2c_read
-  Description:  i2c read by one byte
-  Input:        int file              the open device file descriptor
-                unsigned char offset  address of the register
-                unsigned char *value  the buf you want to save data
-  Output:       none
-  Return:       SUCCESS 0;FAILURE -1
-  Author:       guanghui.chen
-*****************************************************************************/
-int i2c_read(int file,unsigned char offset,unsigned char *value)
-{
-    unsigned char data = 0;
-    int ret = I2C_FAILURE;
-    i2c_Lock();
-
-    ret = i2c_smbus_read_byte_data(file, offset, &data);
-    if(I2C_SUCCESS > ret)
-    {
-        printf("i2c_read:read offset %d error,ret = %x.\n",offset,ret);
-        return I2C_FAILURE;
-    }
-    *value = data;
-
-    i2c_UnLock();
-    return I2C_SUCCESS;
 }
 
