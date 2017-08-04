@@ -1,0 +1,2 @@
+/usr/bin/ar cr ../../lib/libtools.a  CMakeFiles/tools_static.dir/thread/thread.c.o CMakeFiles/tools_static.dir/mutex.c.o CMakeFiles/tools_static.dir/timer/timer.c.o CMakeFiles/tools_static.dir/CRC/crc.c.o CMakeFiles/tools_static.dir/event/event.c.o CMakeFiles/tools_static.dir/log/log.c.o CMakeFiles/tools_static.dir/mem/mem.c.o
+/usr/bin/ranlib ../../lib/libtools.a

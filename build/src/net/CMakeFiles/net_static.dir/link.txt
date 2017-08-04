@@ -1,0 +1,2 @@
+/usr/bin/ar cr ../../lib/libnet.a  CMakeFiles/net_static.dir/socket/udp/udp.c.o CMakeFiles/net_static.dir/net.c.o
+/usr/bin/ranlib ../../lib/libnet.a

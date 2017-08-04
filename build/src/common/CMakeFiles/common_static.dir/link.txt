@@ -1,0 +1,2 @@
+/usr/bin/ar cr ../../lib/libcommon.a  CMakeFiles/common_static.dir/err/wv_err.c.o
+/usr/bin/ranlib ../../lib/libcommon.a

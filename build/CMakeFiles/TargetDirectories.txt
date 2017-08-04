@@ -1,0 +1,9 @@
+/home/mark/code/monitor_system/rx_board/build/src/common/CMakeFiles/common_share.dir
+/home/mark/code/monitor_system/rx_board/build/src/common/CMakeFiles/common_static.dir
+/home/mark/code/monitor_system/rx_board/build/src/drivers/CMakeFiles/drivers_share.dir
+/home/mark/code/monitor_system/rx_board/build/src/drivers/CMakeFiles/drivers_static.dir
+/home/mark/code/monitor_system/rx_board/build/src/net/CMakeFiles/net_share.dir
+/home/mark/code/monitor_system/rx_board/build/src/net/CMakeFiles/net_static.dir
+/home/mark/code/monitor_system/rx_board/build/src/init/CMakeFiles/rx_board.dir
+/home/mark/code/monitor_system/rx_board/build/src/tools/CMakeFiles/tools_share.dir
+/home/mark/code/monitor_system/rx_board/build/src/tools/CMakeFiles/tools_static.dir
