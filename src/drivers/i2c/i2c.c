@@ -12,7 +12,7 @@
 *
 **********************************************************************/
 
-#include "i2c.h"
+#include "i2c/i2c.h"
 
 #include "log/log.h"
 
@@ -136,10 +136,16 @@ wvErrCode I2C_Open(const char *dev_name)
     }
 
     //open
+    if(s_stI2cInfo[index].fd > 0)
+    {
+        LOG_PRINTF(LOG_LEVEL_WARNING, LOG_MODULE_DRIVERS, "%s is already opened, fd: %d", dev_name, s_stI2cInfo[index].fd);
+        return WV_SUCCESS;
+    }
+
     s_stI2cInfo[index].fd = open(dev_name, O_RDWR); 
     if(s_stI2cInfo[index].fd > 0)
     {
-        LOG_PRINTF(LOG_LEVEL_DEBUG, LOG_MODULE_DRIVERS, "Open i2c dev:%s successful.", dev_name);
+        LOG_PRINTF(LOG_LEVEL_DEBUG, LOG_MODULE_DRIVERS, "Open i2c dev:%s successful, fd: %d.", dev_name, s_stI2cInfo[index].fd);
         return WV_SUCCESS;
     }
     else
@@ -179,7 +185,7 @@ wvErrCode I2C_Close(const char *dev_name)
     int index = I2C_FindInfoIndex(dev_name);
     if(index < 0)
     {
-        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: can't open i2c dev: %s", dev_name);
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: can't find i2c dev: %s", dev_name);
         return WV_ERR_FAILURE;
     }
 
@@ -228,7 +234,7 @@ wvErrCode I2C_WriteReg(const char *dev_name, const unsigned short chip_addr, con
 	I2C_Data.nmsgs = 1;
 	I2C_Data.msgs  = (struct i2c_msg *)malloc(I2C_Data.nmsgs * sizeof(struct i2c_msg));
 	I2C_Data.msgs[0].len    = 2;
-	I2C_Data.msgs[0].addr   = (chip_addr >> 1);
+	I2C_Data.msgs[0].addr   = (chip_addr);
 	I2C_Data.msgs[0].flags  = 0;
 	I2C_Data.msgs[0].buf    = (unsigned char*)malloc(I2C_Data.msgs[0].len);
 	I2C_Data.msgs[0].buf[0] = reg_addr;
@@ -237,7 +243,7 @@ wvErrCode I2C_WriteReg(const char *dev_name, const unsigned short chip_addr, con
     if(ioctl(s_stI2cInfo[index].fd, I2C_RDWR, (unsigned long)&I2C_Data) < 0)
     {
         ERR_STRING(err_buf);
-        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: call ioctl:%s", err_buf);
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: fd: %d, call ioctl:%s", s_stI2cInfo[index].fd, err_buf);
         ret = WV_ERR_FAILURE;
     }
    
@@ -288,13 +294,13 @@ wvErrCode I2C_ReadReg(const char *dev_name, const unsigned short chip_addr, cons
     I2C_Data.nmsgs  = 2;
     I2C_Data.msgs   = (struct i2c_msg *)malloc(I2C_Data.nmsgs * sizeof(struct i2c_msg));
     I2C_Data.msgs[0].len    = 1;
-    I2C_Data.msgs[0].addr   = (chip_addr >> 1);
+    I2C_Data.msgs[0].addr   = (chip_addr );
     I2C_Data.msgs[0].flags  = 0;
     I2C_Data.msgs[0].buf    = (unsigned char*)malloc(1);
     I2C_Data.msgs[0].buf[0] = reg_addr;
     
 	I2C_Data.msgs[1].len    = 1;
-	I2C_Data.msgs[1].addr   = (chip_addr >> 1);
+	I2C_Data.msgs[1].addr   = (chip_addr);
     I2C_Data.msgs[1].flags  = I2C_M_RD;
     I2C_Data.msgs[1].buf    = (unsigned char*)malloc(1);
     I2C_Data.msgs[1].buf[0] = 0;	
@@ -302,7 +308,7 @@ wvErrCode I2C_ReadReg(const char *dev_name, const unsigned short chip_addr, cons
     if(ioctl(s_stI2cInfo[index].fd, I2C_RDWR, (unsigned long)&I2C_Data) < 0)
     {
         ERR_STRING(err_buf);
-        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: call ioctl:%s", err_buf);
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: fd: %d, call ioctl:%s", s_stI2cInfo[index].fd, err_buf);
         ret = WV_ERR_FAILURE;
     }
     else
@@ -347,7 +353,11 @@ wvErrCode I2C_WriteRegWithCheck(const char *dev_name, const unsigned short chip_
         {
             if(value != read_val) 
             {
-                printf("Error: WriteVal = %d, ReadVal = %d\n", value, read_val); 
+                printf("Error:ChipAddr:0x%x, Reg:0x%x, WriteVal = %d, ReadVal = %d\n",chip_addr, reg_addr, value, read_val); 
+            }
+            else
+            {
+                printf("Error:ChipAddr:0x%x, Reg:0x%x, WriteVal = %d\n",chip_addr, reg_addr, value); 
             }
         }
 

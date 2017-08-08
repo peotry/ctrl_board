@@ -22,7 +22,7 @@
     Modification: Created file
 
 ******************************************************************************/
-#include "ds1338.h"
+#include "ds1338/ds1338.h"
 
 #include "i2c/i2c.h"
 #include "log/log.h"
