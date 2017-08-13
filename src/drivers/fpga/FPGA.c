@@ -121,7 +121,7 @@ void FPGA_SetMacAddr(U8 *u8MacAddr, U8 ETHType)
 	
 	LOG_PRINTF(LOG_LEVEL_DEBUG, LOG_MODULE_DRIVERS, "ETHY = %d u32MacAddrH = 0x%x u32MacAddrL = 0x%x\n", ETHType, u32MacAddrH, u32MacAddrL);
 
-	if(ETH0 == ETHType)
+	if(ETH_TYPE_0 == ETHType)
 	{
 		FPGA_REG_Write(MAC0REG_HIGHT_ADDR, u32MacAddrH);
 		usleep(20000);
@@ -129,9 +129,9 @@ void FPGA_SetMacAddr(U8 *u8MacAddr, U8 ETHType)
 	}
 	else
 	{
-		FPGA_REG_Write(MAC1REG_HIGHT_ADDR, u32MacAddrH);
+	//	FPGA_REG_Write(MAC1REG_HIGHT_ADDR, u32MacAddrH);
 		usleep(20000);
-		FPGA_REG_Write(MAC1REG_LOWER_ADDR, u32MacAddrL);
+//		FPGA_REG_Write(MAC1REG_LOWER_ADDR, u32MacAddrL);
 	}
 
 }

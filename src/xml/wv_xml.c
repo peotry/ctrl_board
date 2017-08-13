@@ -21,9 +21,76 @@
 #include "appGlobal.h"
 #include "log/log.h"
 
+
+
 /*
-* function: XML_OpenXmlFile
+* function: XML_OpenMem
 *
+* description: 从内存中加载一份xml生成xmldoc
+*
+* input:  @src_buf:xml缓冲区
+*         @buf_len:缓冲区长度
+*         @root_name:根节点名字用于简单校验，若是为NULL则忽略
+*
+* output: @root_node:根节点
+*
+* return@ 
+* success: xmlDocPtr
+*    fail: NULL
+*
+* author: linsheng.pan
+*/
+xmlDocPtr XML_OpenMem(char *src_buf, int buf_len, const char *root_name, xmlNodePtr *root_node)
+{
+    if((!src_buf) || (buf_len < 1) || (!root_name))
+    {
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_XML, "Error: param = NULL");
+        return NULL;
+    }
+
+
+    //从内存中加载xml数据
+    /*
+     *xml之间的互相驳接--注意
+     *xml文件的节点存储跟xmlDoc有关，如字典缓冲,说明节点保存的内容不一定只限定存储在一个节点上,
+     可能跟其他有关; 如果对每个xmlDoc读取的时候限制为XML_PARSE_NOBLANKS | XML_PARSE_NODICT,
+     而且两个xmlDoc保证都是这样,即可实现xml文件的简单合并.
+     *如果在代码去掉这两个限制的话，会在释放文档指针的时候出现错误.
+     *xmlDocPtr xml_doc = xmlReadMemory(src_buf, buf_len, NULL, "UTF-8", XML_PARSE_NOBLANKS | XML_PARSE_NODICT);
+     */
+
+
+    xmlDocPtr xml_doc = xmlReadMemory(src_buf, buf_len, NULL, "UTF-8", XML_PARSE_NOBLANKS | XML_PARSE_NODICT);
+    if(!xml_doc)
+    {
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_XML, "Error: call xmlReadMemory");
+        return NULL;
+    }
+
+    xmlNodePtr cur_node_tmp = xmlDocGetRootElement(xml_doc);
+    if(!cur_node_tmp)
+    {
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_XML, "Error: call xmlDocGetRootElement");
+        xmlFreeDoc(xml_doc);
+        return NULL;
+    }
+
+    if(root_name)
+    {
+        if(0 != xmlStrcmp(cur_node_tmp->name, (xmlChar *)root_name))
+        {
+            xmlFreeDoc(xml_doc);
+            return NULL;
+        }
+    }
+
+    *root_node = cur_node_tmp;
+    return xml_doc;
+}
+
+/*
+ * function: XML_OpenXmlFile
+ *
 * description: 获取xml文档的句柄
 *
 * input:  @filename: xml文档名字
@@ -271,8 +338,6 @@ xmlChar* XML_GetChildNodeValue(xmlNodePtr cur_node,const char *elem_name)
 
     return xmlNodeGetContent(child_node->children);
 }
-
-
 
 /*
 * function: XML_GetNodeSet
