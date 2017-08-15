@@ -24,12 +24,12 @@
 struct EthInfo
 {
     EthType emEthType;
+    int mem_range;
     void *p_PhyAddr;
     void *p_MapAddr;
 };
 
 static struct EthInfo s_stEthInfo[ETH_NUM];
-
 
 /*
 * function: Phy_InitPhyAddr
@@ -50,15 +50,19 @@ static void Phy_InitPhyAddr(void)
 {
     s_stEthInfo[0].emEthType = ETH_TYPE_0;
     s_stEthInfo[0].p_PhyAddr = ETH0_BASE_ADDR;
+    s_stEthInfo[0].mem_range = 0x1fff;
 
     s_stEthInfo[1].emEthType = ETH_TYPE_1;
     s_stEthInfo[1].p_PhyAddr = ETH1_BASE_ADDR;
+    s_stEthInfo[1].mem_range = 0x1fff;
 
     s_stEthInfo[2].emEthType = ETH_TYPE_2;
     s_stEthInfo[2].p_PhyAddr = ETH2_BASE_ADDR;
+    s_stEthInfo[2].mem_range = 0x3ff;
 
     s_stEthInfo[3].emEthType = ETH_TYPE_3;
     s_stEthInfo[3].p_PhyAddr = ETH3_BASE_ADDR;
+    s_stEthInfo[3].mem_range = 0x3ff;
 }
 
 
@@ -77,12 +81,10 @@ static void Phy_InitPhyAddr(void)
 *
 * author: linsheng.pan
 */
-static wvErrCode Phy_MapReg(EthType emEthType)
+wvErrCode Phy_MapReg(EthType emEthType)
 {
     int mem_fd = 0;
-    int mem_len = 0x1fff;
-    int i = 0;
-    int j = 0;
+    char err_str[ERR_BUF_LEN] = {0};
 
     Phy_InitPhyAddr();
 
@@ -94,11 +96,12 @@ static wvErrCode Phy_MapReg(EthType emEthType)
         return WV_ERR_FAILURE;
     }
 
-    s_stEthInfo[emEthType].p_MapAddr = mmap(0, mem_len, PROT_READ | PROT_WRITE, MAP_SHARED, mem_fd, s_stEthInfo[i].p_PhyAddr);
+    s_stEthInfo[emEthType].p_MapAddr = mmap(0, s_stEthInfo[emEthType].mem_range, PROT_READ | PROT_WRITE, MAP_SHARED, mem_fd, s_stEthInfo[emEthType].p_PhyAddr);
 
-    if((void *)(-1) == s_stEthInfo[i].p_MapAddr)
+    if((void *)(-1) == s_stEthInfo[emEthType].p_MapAddr)
     {
-        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: Can't open /dev/mem.");
+        ERR_STRING(err_str);
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_DRIVERS, "Error: call mmap: %s", err_str);
         CLOSE(mem_fd);
 
         return WV_ERR_FAILURE;
@@ -125,9 +128,8 @@ static wvErrCode Phy_MapReg(EthType emEthType)
 *
 * author: linsheng.pan
 */
-static void Phy_MapRegAll(void)
+void Phy_MapRegAll(void)
 {
-    int mem_len = 0x1fff;
     int i = 0;
     int j = 0;
 
@@ -139,7 +141,7 @@ static void Phy_MapRegAll(void)
         {
             for(j = 0; j < i; ++j)
             {
-                munmap(s_stEthInfo[j].p_MapAddr, mem_len);
+                munmap(s_stEthInfo[j].p_MapAddr, s_stEthInfo[j].mem_range);
             }
             return ;
         }
@@ -321,7 +323,7 @@ static void Phy_SetEthReg(EthType emEthType)
     Phy_ReadReg(emEthType, 0, 20, &u32PhyReg20);
     LOG_PRINTF(LOG_LEVEL_DEBUG, LOG_MODULE_DRIVERS, "Read: [Page: 0] [Reg20: 0x%x]", u32PhyReg20);
 
-    u32PhyReg20 |= 0xfa;
+    u32PhyReg20 |= 0xf8;
     Phy_WriteReg(emEthType, 0, 20, u32PhyReg20);
     LOG_PRINTF(LOG_LEVEL_DEBUG, LOG_MODULE_DRIVERS, "Write: [Page: 0] [Reg20: 0x%x]", u32PhyReg20);
 
@@ -411,7 +413,7 @@ static void Phy_SetEthReg(EthType emEthType)
 *
 * author: linsheng.pan
 */
-void PHY_Init(EthType emEthType)
+void Phy_Init(EthType emEthType)
 {
     static int count[ETH_NUM] = {0};
 

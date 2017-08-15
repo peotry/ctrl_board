@@ -37,14 +37,16 @@ int main(int argc, char *argv[])
 
     //FPGA_Init();
 
-    I2C_InitAll();
+    Phy_Init(ETH_TYPE_0);
+    Phy_Init(ETH_TYPE_1);
+    //I2C_InitAll();
 
-    I2C_WriteRegWithCheck(I2C_DEV_NAME_0, 0x4B, 0x4, 0x28);
+    //I2C_WriteRegWithCheck(I2C_DEV_NAME_0, 0x4B, 0x4, 0x28);
 
     //ADT7410_StartTask();
-    THREAD_NEW_DETACH(ADT7410_Example, NULL, "ADT7410_Example");
+    //THREAD_NEW_DETACH(ADT7410_Example, NULL, "ADT7410_Example");
     
-    ds1338_example();  
+    //ds1338_example();  
    
    int count = 5;
 

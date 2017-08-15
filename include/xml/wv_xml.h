@@ -28,18 +28,32 @@ extern "C" {
 #include "libxml/xmlmemory.h"
 #include "libxml/parser.h"
 #include "libxml/xpath.h"
-
-struct XmlData
-{
-    char *filename;
-    xmlDocPtr doc;
-    
-};
+#include "libxml/tree.h"
 
 //解析xml
 
 /*
-* function: XML_GetDoc
+* function: XML_OpenMem
+*
+* description: 从内存中加载一份xml生成xmldoc
+*
+* input:  @src_buf:xml缓冲区
+*         @buf_len:缓冲区长度
+*         @root_name:根节点名字用于简单校验，若是为NULL则忽略
+*
+* output: @root_node:根节点
+*
+* return@ 
+* success: 
+*    fail: 
+*
+* author: linsheng.pan
+*/
+xmlDocPtr XML_OpenMem(char *src_buf, int buf_len, const char *root_name);
+
+
+/*
+* function: XML_OpenXmlFile
 *
 * description: 获取xml文档的句柄
 *
@@ -284,6 +298,63 @@ wvErrCode XML_AddChildCopyNode(xmlNodePtr child_node, xmlNodePtr father_node);
 */
 wvErrCode XML_UpdateChildCopyNode(xmlNodePtr child_node, xmlNodePtr father_node);
 
+
+/*
+* function: XML_XpathGetValue
+*
+* description: 给xpath绝对路径，搜索唯一的值
+*
+* input:  @xml_doc
+*         @xpath: 搜索路径
+*         @str_value: 值
+*         @str_value_len: 
+*
+* output: @
+*
+* return@ 
+* success: WV_SUCCESS
+*    fail: WV_ERR_FAILURE
+*
+* author: linsheng.pan
+*/
+wvErrCode XML_XpathGetValue(xmlDocPtr xml_doc, xmlChar *xpath, char *str_value, int str_value_len);
+
+
+/*
+* function: XML_GetProp
+*
+* description: 获取节点属性，若是返回非空，需要xmlFree释放
+*
+* input:  @
+*
+* output: @
+*
+* return@ 
+* success: 
+*    fail: 
+*
+* author: linsheng.pan
+*/
+xmlChar *XML_GetProp(xmlNodePtr node, const char *name);
+
+/*
+* function: XML_SetProp
+*
+* description: 设置属性
+*
+* input:  @node:节点
+*         @name:
+*         @value:
+*
+* output: @
+*
+* return@ 
+* success: 
+*    fail: 
+*
+* author: linsheng.pan
+*/
+xmlAttrPtr XML_SetProp(xmlNodePtr node, const char *name, const char *value);
 
 //xml编码格式转换
 

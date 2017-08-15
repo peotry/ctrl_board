@@ -16,12 +16,12 @@
  * =====================================================================================
  */
 
-#include "wv_xml.h"
+#include "xml/wv_xml.h"
 
 #include "appGlobal.h"
 #include "log/log.h"
 
-
+#include <string.h>
 
 /*
 * function: XML_OpenMem
@@ -33,6 +33,7 @@
 *         @root_name:根节点名字用于简单校验，若是为NULL则忽略
 *
 * output: @root_node:根节点
+*         @root_name_r:返回的根节点名字
 *
 * return@ 
 * success: xmlDocPtr
@@ -40,14 +41,13 @@
 *
 * author: linsheng.pan
 */
-xmlDocPtr XML_OpenMem(char *src_buf, int buf_len, const char *root_name, xmlNodePtr *root_node)
+xmlDocPtr XML_OpenMem(char *src_buf, int buf_len, const char *root_name)
 {
-    if((!src_buf) || (buf_len < 1) || (!root_name))
+    if((!src_buf) || (buf_len < 1))
     {
         LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_XML, "Error: param = NULL");
         return NULL;
     }
-
 
     //从内存中加载xml数据
     /*
@@ -84,7 +84,6 @@ xmlDocPtr XML_OpenMem(char *src_buf, int buf_len, const char *root_name, xmlNode
         }
     }
 
-    *root_node = cur_node_tmp;
     return xml_doc;
 }
 
@@ -228,7 +227,7 @@ static wvErrCode XML_RenameConf(const char *file_tmp, const char *file, const ch
     return WV_SUCCESS;
 }
 
-#define TXT_ENCODING "GB2312"
+#define TXT_ENCODING "UTF-8"
 
 /*
 * function: XML_WriteXmlFile
@@ -259,7 +258,7 @@ wvErrCode XML_WriteXmlFile(const char *path, xmlDocPtr xml_doc)
 
     if(1 > xmlSaveFormatFileEnc(path_tmp, xml_doc, (const char *) TXT_ENCODING, 1)) 
     {
-        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_XML, "Error: xmlSaveFormatFile err(%d), path=%s", errno, path_tmp);
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_XML, "Error: xmlSaveFormatFile  path=%s", path_tmp);
         return WV_ERR_FAILURE;
     }
 
@@ -338,6 +337,8 @@ xmlChar* XML_GetChildNodeValue(xmlNodePtr cur_node,const char *elem_name)
 
     return xmlNodeGetContent(child_node->children);
 }
+
+
 
 /*
 * function: XML_GetNodeSet
@@ -731,9 +732,118 @@ wvErrCode XML_UpdateChildCopyNode(xmlNodePtr father_node, xmlNodePtr child_node)
 }
 
 
+/*
+* function: XML_XpathGetValue
+*
+* description: 给xpath绝对路径，搜索唯一的值
+*
+* input:  @xml_doc
+*         @xpath: 搜索路径
+*         @str_value: 值
+*         @str_value_len: 
+*
+* output: @
+*
+* return@ 
+* success: WV_SUCCESS
+*    fail: WV_ERR_FAILURE
+*
+* author: linsheng.pan
+*/
+wvErrCode XML_XpathGetValue(xmlDocPtr xml_doc, xmlChar *xpath, char *str_value, int str_value_len)
+{
+	if((!xml_doc) || (!xpath) || (!str_value))
+	{
+		LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_XML, "Error: param = NULL");
+		return WV_ERR_PARAMS;
+	}
+
+	xmlNodeSetPtr nodeset_ptr = NULL;
+	xmlXPathObjectPtr xpath_result_ptr = NULL;
+	xmlChar * value = NULL;
+	wvErrCode ret = WV_SUCCESS;
+
+	xpath_result_ptr = XML_GetNodeSet(xml_doc, xpath);
+	if(xpath_result_ptr)
+	{
+		nodeset_ptr = xpath_result_ptr->nodesetval;
+		//若不是唯一的值，返回错误
+		if(1 != nodeset_ptr->nodeNr)
+		{
+			ret = WV_ERR_FAILURE;
+			xmlXPathFreeObject(xpath_result_ptr);
+		}
+		else
+		{
+			value = xmlNodeListGetString(xml_doc, nodeset_ptr->nodeTab[0]->xmlChildrenNode, 1);
+			strncpy(str_value, value, str_value_len);
+			xmlFree(value);
+			xmlXPathFreeObject(xpath_result_ptr);
+		}
+	}
+	else
+	{
+		ret = WV_ERR_FAILURE;
+	}
+
+	return ret;
+}
 
 
+/*
+* function: XML_GetProp
+*
+* description: 获取节点属性，若是返回非空，需要xmlFree释放
+*
+* input:  @
+*
+* output: @
+*
+* return@ 
+* success: 
+*    fail: 
+*
+* author: linsheng.pan
+*/
+xmlChar *XML_GetProp(xmlNodePtr node, const char *name)
+{
+    if((!node) || (!name))
+    {
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_XML, "Error: param = NULL");
+        return NULL;
+    }
 
+    return xmlGetProp(node, name);
+}
+
+
+/*
+* function: XML_SetProp
+*
+* description: 设置属性
+*
+* input:  @node:节点
+*         @name:
+*         @value:
+*
+* output: @
+*
+* return@ 
+* success: 
+*    fail: 
+*
+* author: linsheng.pan
+*/
+xmlAttrPtr XML_SetProp(xmlNodePtr node, const char *name, const char *value)
+{
+    if((!node) || (!name) || (!value))
+    {
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_XML, "Error: param = NULL");
+        return NULL;
+    }
+
+    return xmlSetProp(node, name, value);
+}
 
 
 

@@ -1,4 +1,4 @@
-﻿/**********************************************************************
+/**********************************************************************
 * Copyright(c), 2017 WELLAV Technology Co.,Ltd.
 * All rights reserved.
 *
@@ -11,59 +11,45 @@
 * Record    :
 *
 **********************************************************************/
-#ifndef INCLUDE_DRIVERS_PHY
-#define INCLUDE_DRIVERS_PHY
+
+#ifndef INCLUDE_DRIVERS_PHY_H
+#define INCLUDE_DRIVERS_PHY_H
 
 #include "appGlobal.h"
 #include "err/wv_err.h"
 
-#define GEM1_NET_CONFIG_BASEADRESS  0xE000B000
-#define GEM2_NET_CONFIG_BASEADRESS  0xE000C000
+#define ETH0_BASE_ADDR             (0xff700000)
+#define ETH1_BASE_ADDR             (0xff702000)
+#define ETH2_BASE_ADDR             (0xff200000)
+#define ETH3_BASE_ADDR             (0xff200800)
 
-#define MAC0REG_HIGHT_ADDR          0x109
-#define MAC0REG_LOWER_ADDR          0x10a
-#define MAC1REG_HIGHT_ADDR          0x209
-#define MAC1REG_LOWER_ADDR          0x20a
+#define ETH_NUM                     (4)
 
-#define XST_EMAC_MEMORY_SIZE_ERROR  1001L   /* Memory space is not big enough
-                                                * to hold the minimum number of
-                                                * buffers or descriptors */
-#define XST_EMAC_MEMORY_ALLOC_ERROR 1002L   /* Memory allocation failed */
-#define XST_EMAC_MII_READ_ERROR     1003L   /* MII read error */
-#define XST_EMAC_MII_BUSY           1004L   /* An MII operation is in progress */
-#define XST_EMAC_OUT_OF_BUFFERS     1005L   /* Driver is out of buffers */
-#define XST_EMAC_PARSE_ERROR        1006L   /* Invalid driver init string */
-#define XST_EMAC_COLLISION_ERROR    1007L   /* Excess deferral or late*/
+#define MDIO_BASE 0x11020000  
+#define MDIO_DATA 0X0014  
+#define MDIO_ADDR 0X0010  
+#define MII_BUSY  0x00000001  
+#define MII_WRITE 0x00000002  
+#define MII_PHY   0x04  
 
-#define XST_SUCCESS                     0L
-#define XST_FAILURE                     1L
+#define READ(_a)     ( *((U32*)(_a)) )  
+#define WRITE(_a, _v)   (*(volatile U32 *)(_a) = (_v))  
 
-#define XEMACPS_NWSR_MDIOIDLE_MASK     0x00000004 /**< PHY management idle */
-#define XEMACPS_NWCTRL_OFFSET          0x00000000 /**< Network Control reg */
-#define XEMACPS_NWCFG_OFFSET           0x00000004 /**< Network Config reg */
-#define XEMACPS_NWSR_OFFSET            0x00000008 /**< Network Status reg */
+enum _EthType
+{
+    ETH_TYPE_0,
+    ETH_TYPE_1,
+    ETH_TYPE_2,
+    ETH_TYPE_3
+};
 
-#define XEMACPS_PHYMNTNC_OP_MASK       0x40020000  /**< operation mask bits */
-#define XEMACPS_PHYMNTNC_OP_R_MASK     0x20000000  /**< read operation */
-#define XEMACPS_PHYMNTNC_OP_W_MASK     0x10000000  /**< write operation */
-#define XEMACPS_PHYMNTNC_ADDR_MASK     0x0F800000  /**< Address bits */
-#define XEMACPS_PHYMNTNC_REG_MASK      0x007C0000  /**< register bits */
-#define XEMACPS_PHYMNTNC_DATA_MASK     0x00000FFF  /**< data bits */
-#define XEMACPS_PHYMNTNC_PHYAD_SHIFT_MASK   23  /**< Shift bits for PHYAD */
-#define XEMACPS_PHYMNTNC_PHREG_SHIFT_MASK   18  /**< Shift bits for PHREG */
+typedef enum _EthType EthType;
 
-#define XEMACPS_PHYMNTNC_OFFSET        0x00000034 /**< Phy Maintaince reg */
+void Phy_MapRegAll(void);
+wvErrCode Phy_MapReg(EthType emEthType);
+wvErrCode Phy_WriteReg(EthType emEthType, U32 page, U32 addr, U32 value);
+wvErrCode Phy_ReadReg(EthType emEthType, U32 page, U32 addr, U32 *value);
+void Phy_InitAll(void);
+void Phy_Init(EthType emEthType);
 
-typedef enum {
-    ETH0,
-    ETH1
-} EthType_enum;
-
-void PHY_RegMap(void);
-wvErrCode PHY_SetLocalMac(U8 * pu8MAC, EthType_enum emEthType);
-BOOL PHY_SetEth(EthType_enum emEthType);
-void PHY_Init(void);
-void PHY_SetIP(U32 u32IP);
-void PHY_GetFreeIP(U32 * pu32Ip);
-
-#endif 
+#endif /* IP_CONFIG_H */
