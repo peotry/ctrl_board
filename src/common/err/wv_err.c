@@ -13,7 +13,7 @@
 *****************************************************************************/
 #include "err/wv_err.h"
 
-#include "log/log.h"
+#include "log/wv_log.h"
 
 #include <stdarg.h>
 
@@ -81,7 +81,7 @@ char * err_GetErrCodeString(wvErrCode enErrCode)
 
         if((u32Index >= MAX_ERR_CODE_NUM) || (WV_ERR_INVALID_ERR_CODE == g_stErrArray[u32Index].enErrCode))
         {
-            //LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_COMMON, "[%s]%d: Can't find errcode [%d] information!\r\n", __func__, __LINE__, enErrCode);
+            //LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NETON, "[%s]%d: Can't find errcode [%d] information!\r\n", __func__, __LINE__, enErrCode);
             return NULL;    
         }
         
@@ -91,7 +91,7 @@ char * err_GetErrCodeString(wvErrCode enErrCode)
     /* 找到所对应的语言 */
     if(g_enLanguage >= EN_LANGUAGE_MAX)
     {
-        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_COMMON, "[%s]%d: Can't support this lanuage [%d]!\r\n", __func__, __LINE__, g_enLanguage);
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NETON, "[%s]%d: Can't support this lanuage [%d]!\r\n", __func__, __LINE__, g_enLanguage);
         return NULL;        
     }
 

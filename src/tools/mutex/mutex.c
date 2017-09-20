@@ -19,7 +19,7 @@
 #include <pthread.h>
 
 #include "mutex/mutex.h"
-#include "log/log.h"
+#include "log/wv_log.h"
 
 static pthread_mutex_t s_mutex;
 

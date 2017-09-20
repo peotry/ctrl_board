@@ -17,10 +17,10 @@
  * =====================================================================================
  */
 
-#include "socket/udp/udp.h"
+#include "udp.h"
 
 #include "appGlobal.h"
-#include "log/log.h"
+#include "log/wv_log.h"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>

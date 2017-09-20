@@ -14,7 +14,7 @@
 
 #include "i2c/i2c.h"
 
-#include "log/log.h"
+#include "log/wv_log.h"
 
 #include <stdio.h>
 #include <unistd.h>

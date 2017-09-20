@@ -22,7 +22,7 @@
 ******************************************************************************/
 #include "ADT7410/ADT7410.h"
 
-#include "log/log.h"
+#include "log/wv_log.h"
 #include "i2c/i2c.h"
 #include "thread/thread.h"
 

@@ -18,7 +18,7 @@
 
 #include "CRC/crc.h"
 
-#include "log/log.h"
+#include "log/wv_log.h"
 
 /*
 * function: Common_CRCCalculate

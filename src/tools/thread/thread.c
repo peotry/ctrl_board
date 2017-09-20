@@ -1,6 +1,6 @@
 #include "thread/thread.h"
 
-#include "log/log.h"
+#include "log/wv_log.h"
 
 pthread_t Thread_NewDetach(ThreadFunc func, void *thr_data, const char *funcname, const char *filename, U32 line)
 {

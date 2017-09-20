@@ -1,6 +1,6 @@
 #include "event/event.h"
 
-#include "log/log.h"
+#include "log/wv_log.h"
 
 #include <errno.h>
 #include <unistd.h>

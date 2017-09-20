@@ -3,7 +3,7 @@
 #include <assert.h>
 
 #include "mem/mem.h"
-#include "log/log.h"
+#include "log/wv_log.h"
 
 
 void *Mem_malloc(U32 u32Len, const char *filename, U32 u32Line)

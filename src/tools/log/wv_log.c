@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include <sys/syslog.h>
 
-#include "log/log.h"
+#include "log/wv_log.h"
 
 static struct LogCtrl_ST s_stLogCtrl;
 static bool s_isSyslogOpen = false;
@@ -434,7 +434,7 @@ int main(int argc, char **argv)
 
 	LOG_PRINTF(LOG_LEVEL_DEBUG, LOG_MODULE_PCM,"pcm..");
 	LOG_PRINTF(LOG_LEVEL_INFO, LOG_MODULE_SYS,"sys..");
-	LOG_PRINTF(LOG_LEVEL_NOTICE, LOG_MODULE_COMM,"comm..");
+	LOG_PRINTF(LOG_LEVEL_NOTICE, LOG_MODULE_NET,"comm..");
 	LOG_PRINTF(LOG_LEVEL_WARNING, LOG_MODULE_FPGA, "fpga..");
 	LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_MUXER,"muxer..");
 	LOG_PRINTF(LOG_LEVEL_DEBUG, LOG_MODULE_TABLE,"table..");

@@ -19,7 +19,7 @@
 #include "timer/timer.h"
 
 #include "event/event.h"
-#include "log/log.h"
+#include "log/wv_log.h"
 #include "thread/thread.h"
 
 #include <errno.h>

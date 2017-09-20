@@ -18,17 +18,17 @@
 #include "net.h"
 
 #include "appGlobal.h"
-#include "log/log.h"
-#include "mutex/mutex.h"
+#include "log/wv_log.h"
+#include "FPGA.h"
 
 #include <arpa/inet.h>
 #include <sys/ioctl.h>
+#include <ctype.h>
 
 #define MAX_NETWORK_NUM         (16)
 
 static struct ifconf s_stIfconf;
 static struct ifreq s_st_arrIfreq[MAX_NETWORK_NUM];
-
 
 static int Net_FindInterface(const char *eth_name)
 {
@@ -87,14 +87,15 @@ static wvErrCode Net_GetInterfaceInfo(void)
     if(!ioctl(sockfd, SIOCGIFCONF, &s_stIfconf))
     {
         interface_num = s_stIfconf.ifc_len / sizeof(struct ifreq);
-        LOG_PRINTF(LOG_LEVEL_DEBUG, LOG_MODULE_NET, "Network interface : %d", interface_num);
+        //LOG_PRINTF(LOG_LEVEL_DEBUG, LOG_MODULE_NET, "Network interface : %d", interface_num);
 
         while(interface_num-- > 0)
         {
             //get mac ip broatcast subnet mask
-            if(!ioctl(sockfd, SIOCGIFFLAGS | SIOCGIFHWADDR | SIOCGIFADDR | SIOCGIFBRDADDR | SIOCGIFNETMASK, &s_st_arrIfreq[interface_num]))
+            //if(!ioctl(sockfd, SIOCGIFFLAGS | SIOCGIFHWADDR | SIOCGIFADDR | SIOCGIFBRDADDR | SIOCGIFNETMASK, &s_st_arrIfreq[interface_num]))
+			if(!ioctl(sockfd,  SIOCGIFADDR , &s_st_arrIfreq[interface_num]))
             {
-                LOG_PRINTF(LOG_LEVEL_DEBUG, LOG_MODULE_NET, "Get Network[%d] Info Success!", interface_num);
+                //LOG_PRINTF(LOG_LEVEL_DEBUG, LOG_MODULE_NET, "Get Network[%d] Info Success!", interface_num);
             }
             else
             {
@@ -116,6 +117,8 @@ static wvErrCode Net_GetInterfaceInfo(void)
 
     }
 
+	CLOSE(sockfd);
+
     return WV_SUCCESS;
 }
 
@@ -134,7 +137,7 @@ static wvErrCode Net_GetInterfaceInfo(void)
 *
 * author: linsheng.pan
 */
-wvErrCode Net_GetIpAddr(const char *eth_name, char *ip_buf, int buf_size)
+wvErrCode Net_GetIpAddrStr(const char *eth_name, char *ip_buf, int buf_size)
 {
     if((!eth_name) || (!ip_buf))
     {
@@ -144,8 +147,6 @@ wvErrCode Net_GetIpAddr(const char *eth_name, char *ip_buf, int buf_size)
     
     int index = -1;
 
-    //锁住资源
-    Mutex_Lock();
     //获取本地网卡信息
     Net_GetInterfaceInfo();
     //判断是否有指定网口的ip
@@ -159,24 +160,20 @@ wvErrCode Net_GetIpAddr(const char *eth_name, char *ip_buf, int buf_size)
     {
         //解锁资源并推出
         LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NET, "Error: Can't find %s", eth_name);
-        Mutex_Unlock();
         return WV_ERR_FAILURE;
     }
-    //解锁资源
-    Mutex_Unlock();
 
     return WV_SUCCESS;
 }
 
-
 /*
-* function: Net_GetMacAddr
+* function: 获取本机指定网卡的IP
 *
-* description: 获取本机指定网卡的MAC地址
+* description: Net_GetIpAddr
 *
-* input:  @eth_name: 网卡名字
-*         @mac_buf: 存储mac地址
-*         @buf_size: mac地址的长度
+* input:  @eth_name: 网卡的名字
+*         @ip_buf: ip的字符串
+*         @buf_size: 字符串的长度
 *
 * output: @
 *
@@ -184,37 +181,37 @@ wvErrCode Net_GetIpAddr(const char *eth_name, char *ip_buf, int buf_size)
 *
 * author: linsheng.pan
 */
-wvErrCode Net_GetMacAddr(const char *eth_name, unsigned char *mac_buf, int buf_size)
+wvErrCode Net_GetIpAddr(const char *eth_name, unsigned int *ip)
 {
-    if((!eth_name) || (!mac_buf))
+    if((!eth_name) || (!ip))
     {
         LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NET, "Error: param = NULL");
         return WV_ERR_PARAMS;
     }
-
+    
     int index = -1;
+	char ip_buf[16] = {0};
+	unsigned int val = 0;
 
-    //锁住资源
-    Mutex_Lock();
     //获取本地网卡信息
     Net_GetInterfaceInfo();
-    //判断是否有指定网卡
+    //判断是否有指定网口的ip
     if((index = Net_FindInterface(eth_name)) >= 0)
     {
-        memcpy(mac_buf, s_st_arrIfreq[index].ifr_hwaddr.sa_data, buf_size);
+        //将ip的网络序转换为点十制
+        inet_ntop(AF_INET, &(((struct sockaddr_in *)&(s_st_arrIfreq[index].ifr_addr))->sin_addr.s_addr), ip_buf, sizeof(ip_buf));
+		memcpy(&val, &(((struct sockaddr_in *)&(s_st_arrIfreq[index].ifr_addr))->sin_addr.s_addr), sizeof(val));
+		*ip = ntohl(val);
+		//LOG_PRINTF(LOG_LEVEL_DEBUG, LOG_MODULE_NET, "%s : %s", eth_name, ip_buf);
     }
     else
     {
         //解锁资源并推出
         LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NET, "Error: Can't find %s", eth_name);
-        Mutex_Unlock();
         return WV_ERR_FAILURE;
     }
-    //解锁资源
-    Mutex_Unlock();
 
     return WV_SUCCESS;
-
 }
 
 
@@ -302,7 +299,22 @@ wvErrCode Net_SetMacAddr(const char *eth_name, const unsigned char *mac_buf, int
 *
 * author: linsheng.pan
 */
-wvErrCode Net_SetIpAddr2FPGA(const char *eth_name, const char *ip_buf, int buf_size);
+wvErrCode Net_SetIpAddr2FPGA(const char *eth_name)
+{
+	if(!eth_name)
+	{
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NET, "Error: param = NULL");
+        return WV_ERR_FAILURE;
+    }	
+
+	U32 u32IPAddr = 0;
+
+	Net_GetIpAddr(eth_name, &u32IPAddr);
+
+//	FPGA_REG_Write(TSIP_IP_ADDR, u32IPAddr);
+
+	return WV_SUCCESS;
+}
 
 
 /*
@@ -320,7 +332,23 @@ wvErrCode Net_SetIpAddr2FPGA(const char *eth_name, const char *ip_buf, int buf_s
 *
 * author: linsheng.pan
 */
-wvErrCode Net_SetMacAddr2FPGA(const char *eth_name, const unsigned char *mac_buf, int buf_size);
+wvErrCode Net_SetMacAddr2FPGA(const char *eth_name)
+{
+	if(!eth_name)
+	{
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NET, "Error: param = NULL");
+        return WV_ERR_FAILURE;
+    }	
+
+	U8 mac_addr[6] = {0};
+
+	Net_GetLocalMac(eth_name, mac_addr, sizeof(mac_addr));
+
+	FPGA_SetMacAddr(mac_addr);
+
+	return WV_SUCCESS;
+}
+
 
 
 /*
@@ -337,9 +365,9 @@ wvErrCode Net_SetMacAddr2FPGA(const char *eth_name, const unsigned char *mac_buf
 *
 * author: linsheng.pan
 */
-wvErrCode Net_BindInterface(int sockfd, const char *eth_name)
+wvErrCode Net_BindInterface(int *sockfd, const char *eth_name)
 {
-    if(!eth_name)
+    if((!eth_name) && (!sockfd))
     {
         LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NET, "Error: param = NULL");
         return WV_ERR_PARAMS;
@@ -351,7 +379,7 @@ wvErrCode Net_BindInterface(int sockfd, const char *eth_name)
     memset(&netdev, 0, sizeof(netdev));
     strncpy(netdev.ifr_name, eth_name, sizeof(netdev.ifr_name) - 1);
 
-    ret = setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, &netdev, sizeof(netdev));
+    ret = setsockopt(*sockfd, SOL_SOCKET, SO_BINDTODEVICE, &netdev, sizeof(netdev));
 
     if(ret)
     {
@@ -363,4 +391,233 @@ wvErrCode Net_BindInterface(int sockfd, const char *eth_name)
 
     return WV_SUCCESS;
 }
+
+
+
+/*
+* function: Net_GetIpAddrWithDHCP
+*
+* description: 动态获取IP
+*
+* input:  @
+*
+* output: @
+*
+* return@ 
+* success: 
+*    fail: 
+*
+* author: linsheng.pan
+*/
+wvErrCode Net_GetIpAddrWithDHCP(const char *eth_name)
+{
+	if(!eth_name)
+    {
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NET, "Error: param = NULL");
+        return WV_ERR_PARAMS;
+    }
+
+	char cmd[128] = {0};
+	//尝试5次获取动态ip，失败后自动退出
+	snprintf(cmd, sizeof(cmd), "udhcpc -t 5 -n -i %s", eth_name);
+	system(cmd);
+
+	return WV_SUCCESS;
+}
+
+
+/*
+* function: Net_GetLocalNetMask
+*
+* description: 获取网卡的子网掩码
+*
+* input:  @
+*
+* output: @
+*
+* return@ 
+* success: 
+*    fail: 
+*
+* author: linsheng.pan
+*/
+wvErrCode Net_GetLocalNetMask(const char *eth_name, char *net_mask_str, int str_len)  
+{  
+	if((!eth_name) || (!net_mask_str))
+	{
+		LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NET, "Error: param = NULL");
+        return WV_ERR_PARAMS;
+	}
+
+	const int ip_str_len = 16;
+
+	if(str_len < ip_str_len)
+	{
+		LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NET, "Error: str_len = %d",  str_len);
+        return WV_ERR_PARAMS;
+	}
+	
+    int sock_netmask;  
+    char err_buf[ERR_BUF_LEN] = {0}; 
+  
+    struct ifreq ifr_mask;  
+    struct sockaddr_in *net_mask;  
+          
+    sock_netmask = socket( AF_INET, SOCK_STREAM, 0 );  
+    if( -1 == sock_netmask)  
+    {  
+		ERR_STRING(err_buf);
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NET, "Error: call socket:%s", err_buf); 
+        return WV_ERR_FAILURE;  
+    }  
+      
+    memset(&ifr_mask, 0, sizeof(ifr_mask));     
+    strncpy(ifr_mask.ifr_name, eth_name, sizeof(ifr_mask.ifr_name )-1);     
+  
+    if((ioctl( sock_netmask, SIOCGIFNETMASK, &ifr_mask ) ) < 0 )   
+    {  
+        ERR_STRING(err_buf);
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NET, "Error: call socket:%s", err_buf);
+		CLOSE(sock_netmask);
+        return WV_ERR_FAILURE;   
+    }  
+      
+    net_mask = (struct sockaddr_in *)&( ifr_mask.ifr_netmask );  
+    strncpy(net_mask_str, inet_ntoa( net_mask -> sin_addr), str_len);  
+      
+    printf("local netmask:%s\n",net_mask_str);      
+      
+    CLOSE(sock_netmask); 
+
+	return WV_SUCCESS;
+}  
+
+
+/*
+* function: Net_GetLocalMac
+*
+* description: 获取网卡的mac
+*
+* input:  @
+*
+* output: @
+*
+* return@ 
+* success: 
+*    fail: 
+*
+* author: linsheng.pan
+*/
+wvErrCode Net_GetLocalMac(const char *eth_name, char *mac_addr, int str_len)  
+{  
+	if((!eth_name) || (!mac_addr))
+	{
+		LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NET, "Error: param = NULL");
+        return WV_ERR_PARAMS;
+	}
+
+	if(str_len < 6)
+	{
+		LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NET, "Error: str_len= %d\n", str_len);
+        return WV_ERR_PARAMS;
+	}
+	
+    int sock_mac;  
+    struct ifreq ifr_mac;  
+	char err_buf[ERR_BUF_LEN] = {0};
+      
+    sock_mac = socket( AF_INET, SOCK_STREAM, 0 );  
+    if(sock_mac == -1)  
+    {  
+		ERR_STRING(err_buf);
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NET, "Error: call socket:%s", err_buf); 
+        return WV_ERR_FAILURE;  
+    }  
+      
+    memset(&ifr_mac,0,sizeof(ifr_mac));     
+    strncpy(ifr_mac.ifr_name, eth_name, sizeof(ifr_mac.ifr_name)-1);     
+  
+    if((ioctl( sock_mac, SIOCGIFHWADDR, &ifr_mac)) < 0)  
+    {  
+        ERR_STRING(err_buf);
+        LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NET, "Error: call socket:%s", err_buf);
+		CLOSE(sock_mac);
+        return WV_ERR_FAILURE;   
+    }    
+
+	memcpy(mac_addr, ifr_mac.ifr_hwaddr.sa_data, str_len);
+      
+    CLOSE(sock_mac); 
+
+	return WV_SUCCESS;
+}  
+
+
+/*
+* function: Net_GetGateWay
+*
+* description: 获取网管
+*
+* input:  @
+*
+* output: @
+*
+* return@ 
+* success: 
+*    fail: 
+*
+* author: linsheng.pan
+*/
+wvErrCode Net_GetGateWay(char *gateway_str, int str_len)  
+{  
+	if(!gateway_str)
+	{
+		LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NET, "Error: param = NULL");
+        return WV_ERR_PARAMS;
+	}
+
+	if(str_len < 16)
+	{
+		LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NET, "Error: str_len = %d",  str_len);
+        return WV_ERR_PARAMS;
+	}
+
+    FILE *fp;  
+    char buf[512];  
+    char cmd[128];  
+    char *tmp;  
+	char err_buf[ERR_BUF_LEN] = {0};
+  
+    strncpy(cmd, "ip route", sizeof(cmd));  
+    fp = popen(cmd, "r");  
+    if(!fp)  
+    {  
+		ERR_STRING(err_buf);
+		LOG_PRINTF(LOG_LEVEL_ERROR, LOG_MODULE_NET, "Error: call popen:%s", err_buf);
+
+		return WV_ERR_FAILURE;
+    }  
+
+	
+    while(fgets(buf, sizeof(buf), fp) != NULL)  
+    {  
+        tmp =buf;  
+        while(*tmp && isspace(*tmp)) 
+        {
+            ++tmp;  
+        }
+		
+        if(strncmp(tmp, "default", strlen("default")) == 0)  
+        {
+            break;  
+        }
+    }  
+	
+    sscanf(buf, "%*s%*s%s", gateway_str);         
+    pclose(fp);  
+      
+    return WV_SUCCESS;  
+}  
+
+
 

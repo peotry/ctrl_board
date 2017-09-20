@@ -13,7 +13,7 @@
 ******************************************************************************/
 #include "GPIO.h"
 
-#include "log/log.h"
+#include "log/wv_log.h"
 
 #include <stdio.h>
 #include <unistd.h>

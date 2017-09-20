@@ -14,7 +14,7 @@
 #include "psconf/psconf.h"
 
 #include "fpga/FPGA.h"
-#include "log/log.h"
+#include "wv_log.h"
 
 #include <stdio.h>
 #include <stdlib.h>

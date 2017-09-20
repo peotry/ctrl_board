@@ -13,7 +13,7 @@
 **********************************************************************/
 #include "FPGA.h"
 #include "REG.h"
-#include "log/log.h"
+#include "log/wv_log.h"
 #include "phy/phy.h"
 
 /*****************************************************************************
@@ -123,9 +123,9 @@ void FPGA_SetMacAddr(U8 *u8MacAddr, U8 ETHType)
 
 	if(ETH_TYPE_0 == ETHType)
 	{
-		FPGA_REG_Write(MAC0REG_HIGHT_ADDR, u32MacAddrH);
+//		FPGA_REG_Write(MAC0REG_HIGHT_ADDR, u32MacAddrH);
 		usleep(20000);
-		FPGA_REG_Write(MAC0REG_LOWER_ADDR, u32MacAddrL);
+//		FPGA_REG_Write(MAC0REG_LOWER_ADDR, u32MacAddrL);
 	}
 	else
 	{

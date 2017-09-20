@@ -13,7 +13,7 @@
  */
 
 #include "REG.h"
-#include "log/log.h"
+#include "log/wv_log.h"
 
 #include <stdio.h>
 #include <stdlib.h>

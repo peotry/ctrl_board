@@ -13,7 +13,7 @@
 ******************************************************************************/
 #include "uart/uart.h"
 
-#include "log/log.h"
+#include "log/wv_log.h"
 
 #include <semaphore.h>
 #include <fcntl.h>

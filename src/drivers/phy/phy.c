@@ -1,20 +1,6 @@
-/**********************************************************************
-* Copyright(c), 2017 WELLAV Technology Co.,Ltd.
-* All rights reserved.
-*
-* FileName:     IPconfig.c
-* Description:  IP manage and configure
-* Author    :   ruibin.zhang
-* Modified  :
-* Reviewer  :
-* Date      :   2017-03-04
-* Record    :
-*
-**********************************************************************/
-
 #include "phy/phy.h"
 
-#include "log/log.h"
+#include "log/wv_log.h"
 
 #include <stdio.h>
 #include <sys/mman.h>
