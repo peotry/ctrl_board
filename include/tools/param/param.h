@@ -1,12 +1,12 @@
 /*
  * =====================================================================================
  *
- *       Filename:  crc.h
+ *       Filename:  param.h
  *
  *    Description:  
  *
  *        Version:  1.0
- *        Created:  09/13/17 11:28:50
+ *        Created:  09/13/17 09:43:16
  *       Revision:  none
  *       Compiler:  gcc
  *
@@ -15,18 +15,12 @@
  *
  * =====================================================================================
  */
-#ifndef INCLUDE_TOOLS_CRC_H
-#define INCLUDE_TOOLS_CRC_H 
+#ifndef INCLUDE_TOOLS_PARAM_H
+#define INCLUDE_TOOLS_PARAM_H 
 
-#include "appGlobal.h"
+#include "err/wv_err.h"
 
-#define CRC32_POLYNOMIAL    (0x04C11DB7)
+wvErrCode Param_ReadFile(const char *filename, char *buf, const int buf_len);
+wvErrCode Param_WriteFile(const char *filename, const char *buf, const int buf_len);
 
-U32 CRC_Calculate(U8 *data, U32 length, U32 u32CRCValue);
-
-#endif /* ifndef INCLUDE_TOOLS_CRC_H */
-
-
-
-
-
+#endif /* ifndef INCLUDE_TOOLS_PARAM_H */

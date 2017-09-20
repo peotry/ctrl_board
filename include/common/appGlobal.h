@@ -68,6 +68,13 @@ typedef enum{
 #define WELLAV_DATA             "/wellav_data/"
 #define PROCESS_NAME            ("control_board")
 
+#define ETH0_IP_BASE_STR        ("192.168.1.100")
+#define ETH1_IP_BASE_STR        ("192.168.3.100")
+#define ETH1_GAY_WAY            ("192.168.3.1")
+
+#define ETH0_NAME               ("eth0")
+#define ETH1_NAME               ("eth1")
+
 /**********************************************************************
  * Data type macro
  *********************************************************************/

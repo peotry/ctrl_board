@@ -47,7 +47,7 @@ typedef enum
     LOG_MODULE_DRIVERS   =      (0x1 << 3),
     LOG_MODULE_WEB       =      (0x1 << 4),
     LOG_MODULE_XML       =      (0x1 << 5),
-    LOG_MODULE_COMMON    =      (0x1 << 6)
+    LOG_MODULE_NETON    =      (0x1 << 6)
 }LogModule_EM;
 
 

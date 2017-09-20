@@ -36,7 +36,10 @@
 *
 * author: linsheng.pan
 */
-wvErrCode Net_GetIpAddr(const char *eth_name, char *ip_buf, int buf_size);
+wvErrCode Net_GetIpAddr(const char *eth_name, unsigned int *ip);
+
+wvErrCode Net_GetIpAddrStr(const char *eth_name, char *ip_buf, int buf_size);
+
 
 
 /*
@@ -75,6 +78,7 @@ wvErrCode Net_GetMacAddr(const char *eth_name, unsigned char *mac_buf, int buf_s
 wvErrCode Net_SetIpAddr(const char *eth_name, const char *ip_buf, int buf_size);
 
 
+
 /*
 * function: Net_SetMacAddr
 *
@@ -108,7 +112,7 @@ wvErrCode Net_SetMacAddr(const char *eth_name, const unsigned char *mac_buf, int
 *
 * author: linsheng.pan
 */
-wvErrCode Net_SetIpAddr2FPGA(const char *eth_name, const char *ip_buf, int buf_size);
+wvErrCode Net_SetIpAddr2FPGA(const char *eth_name);
 
 
 /*
@@ -126,7 +130,7 @@ wvErrCode Net_SetIpAddr2FPGA(const char *eth_name, const char *ip_buf, int buf_s
 *
 * author: linsheng.pan
 */
-wvErrCode Net_SetMacAddr2FPGA(const char *eth_name, const unsigned char *mac_buf, int buf_size);
+wvErrCode Net_SetMacAddr2FPGA(const char *eth_name);
 
 
 /*
@@ -143,6 +147,16 @@ wvErrCode Net_SetMacAddr2FPGA(const char *eth_name, const unsigned char *mac_buf
 *
 * author: linsheng.pan
 */
-wvErrCode Net_BindInterface(int sockfd, const char *eth_name);
+wvErrCode Net_BindInterface(int *sockfd, const char *eth_name);
+
+wvErrCode Net_GetIpAddrWithDHCP(const char * eth_name);
+
+wvErrCode Net_GetLocalNetMask(const char * eth_name, char * net_mask_str, int str_len);
+
+wvErrCode Net_GetLocalMac(const char *eth_name, char * mac_addr, int str_len);
+
+
+wvErrCode Net_GetGateWay(char *gateway, int str_len);
+
 
 #endif /* ifndef INCLUDE_NET_NET_H */
